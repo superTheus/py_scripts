@@ -1,9 +1,13 @@
 import streamlit as st
 from openai import OpenAI
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+secret_key = os.getenv('OPENAI_API_KEY')
 
 def ia(prompt, **kwargs):
-  # client = OpenAI()
+  client = OpenAI(api_key=secret_key)
   max_tokens = kwargs.get('max_tokens', 500)
   temperature = kwargs.get('temperature', 0)
   
@@ -18,6 +22,13 @@ def ia(prompt, **kwargs):
   )
   
   return resposta.choices[0].message.content
+
+
+@st.dialog("Aqui está o resultado!")
+def response(resposta):
+    st.json(resposta)
+    if st.button("Voltar"):
+        st.rerun()
 
 st.title("Olá! Eu sou um robô que gera receitas.")
 ingredientes = st.text_input("Me dê os ingrediente que você tem na sua casa, por favor.\n")
@@ -35,11 +46,9 @@ restricoes = st.text_input("Você tem alguma restrição alimentar ? (Ex: Vegeta
 if not restricoes:
   restricoes = "nenhuma"
 
-if st.button("Gerar Receita"):
-  st.write("Aguarde um momento, estou gerando a receita para você.")
-  
+if st.button("Gerar Receita"):  
   prompt = f"""Eu tenho os seguintes ingredientes: {ingredientes}. 
-    Gostaria de uma receita de {tipo} {culinaria} com tempo de preparo {tempo}, 
+    Gostaria de uma receita de {tipo}, com a culinária de {culinaria} com tempo de preparo {tempo}, 
     complexidade {complexidade}, para {porcoes} pessoas, com as restrições alimentares de {restricoes}.
 
     Mas preciso que siga as seguintes regras:
@@ -58,7 +67,7 @@ if st.button("Gerar Receita"):
         
     Atenção: Preciso que use exatamente o mesmo formato, com os mesmo nomes das keys.
     Atenção: Não esqueça de seguir as regras que eu te passei.
-    Atenção: Caso o o tipo da refeição não seja lanche nem almoço, janta ou café da manhã, 
+    Atenção: Caso o o tipo da refeição não seja lanche nem almoço, janta, petisco, sobremesa, café da manhã ou coisas similiares, 
     por favor, me retorne um json de erro e não gera a receita, o JSON de erro deve ter a seguinte estrutura.
     Atenção: Verifique os dados como os ingredientes para que os seja algo viável e realmente possíveis para um alimento.
     exemplo: Se ele colocar algo como cimento, seja inválido e entre na mensagem de erro
@@ -76,6 +85,6 @@ if st.button("Gerar Receita"):
     ```
   Quero somente o conteúdo do JSON, sem a formatação. """
         
-  resposta = ia(prompt, max_tokens=500, temperature=0.5)
-  
-  st.json(resposta)
+  with st.spinner("Aguarde um momento, estou gerando a receita para você."):
+    resposta = ia(prompt, max_tokens=500, temperature=0.5)    
+    response(resposta)
