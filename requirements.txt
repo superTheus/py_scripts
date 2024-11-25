@@ -5,3 +5,4 @@ joblib
 mysql.connector
 python-dotenv
 openai
+streamlit
