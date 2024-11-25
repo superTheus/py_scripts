@@ -4,7 +4,12 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-secret_key = os.getenv('OPENAI_API_KEY')
+
+if "OPENAI_API_KEY" not in st.secrets:
+    load_dotenv()  # Carregar .env no local
+    secret_key = os.getenv("OPENAI_API_KEY")
+else:
+    secret_key = st.secrets["OPENAI_API_KEY"]  
 
 def ia(prompt, **kwargs):
   client = OpenAI(api_key=secret_key)
