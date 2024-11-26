@@ -6,14 +6,20 @@ import json
 
 load_dotenv()
 
+if "GEMINI_API_KEY" not in st.secrets:
+    load_dotenv()
+    secret_key_gemini = os.getenv("GEMINI_API_KEY")
+else:
+    secret_key_gemini = st.secrets["GEMINI_API_KEY"]  
+    
 if "OPENAI_API_KEY" not in st.secrets:
     load_dotenv()
-    secret_key = os.getenv("OPENAI_API_KEY")
+    secret_key_openai = os.getenv("OPENAI_API_KEY")
 else:
-    secret_key = st.secrets["OPENAI_API_KEY"]  
+    secret_key_openai = st.secrets["OPENAI_API_KEY"]  
 
-def ia(prompt, **kwargs):
-  client = OpenAI(api_key=secret_key)
+def iaOpenAi(prompt, **kwargs):
+  client = OpenAI(api_key=secret_key_openai)
   max_tokens = kwargs.get('max_tokens', 500)
   temperature = kwargs.get('temperature', 0)
   
@@ -28,6 +34,24 @@ def ia(prompt, **kwargs):
   )
   
   return resposta.choices[0].message.content
+
+def iaGemini(prompt, **kwargs):
+  client = OpenAI(api_key=secret_key_gemini, base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
+  max_tokens = kwargs.get('max_tokens', 500)
+  temperature = kwargs.get('temperature', 0)
+  
+  resposta = client.chat.completions.create(
+      model='gemini-1.5-flash',
+      messages=[
+          {'role':'user','content':prompt}
+      ],
+      n=1,
+      max_tokens=max_tokens,
+      temperature=temperature,
+  )
+  
+  return resposta.choices[0].message.content
+
 
 @st.dialog("Aqui está a sua receita! 🎉")
 def response(json):
@@ -50,6 +74,12 @@ def error(json):
         st.rerun()
 
 st.title("Olá! Eu sou um robô que gera receitas. 🫡")
+
+ia = st.selectbox("Você tem preferência por uma IA?\n", ["OpenAI", "Gemini"])
+
+if not ia:
+  ia = "OpenAI"
+
 ingredientes = st.text_input("Me dê os ingrediente que você tem na sua casa, por favor.\n")
 tipo = st.selectbox("Que tipo de refeição é essa ?", ["Lanche", "Jantar", "Almoço", "Sobremesa", "Café da manhã", "Petisco", "Você decide"])
 
@@ -120,12 +150,19 @@ if st.button("Gerar Receita"):
     ```json
         conteudo json
     ```
-  Quero somente o conteúdo do JSON, sem a formatação. """
+    Quero uma atenção especial na formatação do JSON, por favor, siga a risca o que eu pedi.
+    Quero que não tenha esses caracteres de ``` e nem a palavra json, quero somente o conteúdo do JSON, sem a formatação."""
         
   with st.spinner("Aguarde um momento, estou gerando a receita para você. 🚀"):
-    resposta = ia(prompt, max_tokens=500, temperature=0.5)
-    dados = json.loads(resposta)
-    
+    if ia == "OpenAI":
+      resposta = iaOpenAi(prompt, max_tokens=500, temperature=0.5)
+      dados = json.loads(resposta)
+    else:
+      resposta = iaGemini(prompt, max_tokens=500, temperature=0.5)  
+      resposta = resposta.replace("```json", "").replace("```", "").strip()
+      print(resposta)
+      dados = json.loads(resposta)
+        
     if dados.get("erro"):
       error(dados)
     else:
